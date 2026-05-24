@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #1a1a2e;
+      margin-bottom: 30px;
+      font-size: 2rem;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+      border-color: #4361ee;
+    }
+
+    .input-group button {
+      padding: 12px 24px;
+      background: #4361ee;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .input-group button:hover {
+      background: #3a56d4;
+    }
+
+    .todo-list {
+      list-style: none;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: transform 0.1s;
+    }
+
+    .todo-item:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+
+    .todo-item.completed .todo-title {
+      text-decoration: line-through;
+      color: #999;
+    }
+
+    .todo-checkbox {
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      accent-color: #4361ee;
+    }
+
+    .todo-title {
+      flex: 1;
+      font-size: 1rem;
+      color: #333;
+    }
+
+    .todo-delete {
+      padding: 6px 12px;
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+
+    .todo-delete:hover {
+      background: #e55555;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #999;
+      padding: 40px;
+      font-size: 1.1rem;
+    }
+
+    .stats {
+      text-align: center;
+      color: #666;
+      margin-top: 20px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📝 Todo List</h1>
+
+    <div class="input-group">
+      <input type="text" id="todoInput" placeholder="Tambah todo baru..." autofocus>
+      <button onclick="addTodo()">Tambah</button>
+    </div>
+
+    <ul class="todo-list" id="todoList"></ul>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <script>
+    const todoInput = document.getElementById('todoInput');
+    const todoList = document.getElementById('todoList');
+    const stats = document.getElementById('stats');
+
+    // Load todos saat halaman dibuka
+    loadTodos();
+
+    // Enter key untuk tambah todo
+    todoInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') addTodo();
+    });
+
+    async function loadTodos() {
+      try {
+        const res = await fetch('/todos');
+        const todos = await res.json();
+        renderTodos(todos);
+      } catch (err) {
+        console.error('Gagal load todos:', err);
+      }
+    }
+
+    function renderTodos(todos) {
+      if (todos.length === 0) {
+        todoList.innerHTML = '<li class="empty-state">Belum ada todo. Tambah yang pertama!</li>';
+        stats.textContent = '';
+        return;
+      }
+
+      const completed = todos.filter(t => t.completed).length;
+      stats.textContent = `${completed} dari ${todos.length} selesai`;
+
+      todoList.innerHTML = todos.map(todo => `
+        <li class="todo-item ${todo.completed ? 'completed' : ''}">
+          <input 
+            type="checkbox" 
+            class="todo-checkbox" 
+            ${todo.completed ? 'checked' : ''} 
+            onchange="toggleTodo(${todo.id}, ${!todo.completed})"
+            aria-label="Tandai ${todo.completed ? 'belum' : 'sudah'} selesai"
+          >
+          <span class="todo-title">${escapeHtml(todo.title)}</span>
+          <button class="todo-delete" onclick="deleteTodo(${todo.id})" aria-label="Hapus todo">Hapus</button>
+        </li>
+      `).join('');
+    }
+
+    async function addTodo() {
+      const title = todoInput.value.trim();
+      if (!title) return;
+
+      try {
+        await fetch('/todos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title })
+        });
+        todoInput.value = '';
+        loadTodos();
+      } catch (err) {
+        console.error('Gagal tambah todo:', err);
+      }
+    }
+
+    async function toggleTodo(id, completed) {
+      try {
+        await fetch(`/todos/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ completed })
+        });
+        loadTodos();
+      } catch (err) {
+        console.error('Gagal update todo:', err);
+      }
+    }
+
+    async function deleteTodo(id) {
+      try {
+        await fetch(`/todos/${id}`, { method: 'DELETE' });
+        loadTodos();
+      } catch (err) {
+        console.error('Gagal hapus todo:', err);
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
