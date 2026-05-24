@@ -1,0 +1,45 @@
+services:
+  postgres-server:
+    container_name: postgres-server
+    image: postgres:14.23
+    environment:
+      - POSTGRES_PASSWORD=mantaps15
+      - POSTGRES_DB=todo_db
+    ports:
+      - 5433:5432
+    networks:
+      - todo-app-network
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  todo-app:
+    container_name: todo-app
+    image: guaryyyyy/todo-app:1.0.0
+    networks:
+      - todo-app-network
+    depends_on:
+      - postgres-server
+    environment:
+      - DB_HOST=postgres-server
+      - DB_PORT=5432
+      - DB_NAME=todo_db
+      - DB_USER=postgres
+      - DB_PASSWORD=mantaps15
+
+  nginx:
+    container_name: nginx
+    image: nginx:latest
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - todo-app
+    networks:
+      - todo-app-network
+
+networks:
+  todo-app-network:
+
+volumes:
+  postgres-data:
