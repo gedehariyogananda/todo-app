@@ -3,8 +3,7 @@ services:
     container_name: postgres-server
     image: postgres:14.23
     environment:
-      - POSTGRES_PASSWORD=mantaps15
-      - POSTGRES_DB=todo_db
+      - POSTGRES_PASSWORD=akusayangibu
     ports:
       - 5433:5432
     networks:
@@ -24,7 +23,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=todo_db
       - DB_USER=postgres
-      - DB_PASSWORD=mantaps15
+      - DB_PASSWORD=akusayangibu
 
   nginx:
     container_name: nginx
